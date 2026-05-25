@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced IoT Dataset Generator - Anti-Overfitting</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 { font-size: 2.2em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        .header .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .content { padding: 30px; }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 18px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.95em;
+        }
+        
+        .control-group input, .control-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .threshold-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .threshold-card.normal { border-left-color: #4caf50; }
+        .threshold-card.warning { border-left-color: #ff9800; }
+        .threshold-card.dangerous { border-left-color: #f44336; }
+        
+        .threshold-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .threshold-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .threshold-input {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .threshold-input label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .threshold-input input {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .preset-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .generate-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.4em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .preview {
+            background: #263238;
+            color: #aed581;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card.normal { border-left-color: #4caf50; }
+        .stat-card.warning { border-left-color: #ff9800; }
+        .stat-card.dangerous { border-left-color: #f44336; }
+        
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .stat-card p {
+            font-size: 2em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .download-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .download-btn.csv { background: #2196f3; color: white; }
+        .download-btn.json { background: #9c27b0; color: white; }
+        .download-btn.python { background: #ff5722; color: white; }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .info-box h4 {
+            color: #1976d2;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .info-box.success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        
+        .info-box.success h4 {
+            color: #2e7d32;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .feature-item::before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status.success { background: #c8e6c9; color: #2e7d32; }
+        .status.info { background: #fff9c4; color: #f57f17; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Enhanced IoT Dataset Generator</h1>
+            <p>Advanced realistic data with anti-overfitting features</p>
+            <div class="badge">Temporal Patterns • Noise • Correlations • Transitions • Outliers</div>
+        </div>
+        
+        <div class="content">
+            <!-- Anti-Overfitting Features -->
+            <div class="section">
+                <h2>🛡️ Anti-Overfitting Features</h2>
+                <div class="info-box success">
+                    <h4>Enhanced Realism - Enabled Features:</h4>
+                    <div class="feature-list">
+                        <div class="feature-item">Temporal patterns (daily cycles)</div>
+                        <div class="feature-item">Temperature-humidity correlation</div>
+                        <div class="feature-item">Sensor noise & drift</div>
+                        <div class="feature-item">Gradual state transitions</div>
+                        <div class="feature-item">Random outliers & spikes</div>
+                        <div class="feature-item">Feature interactions</div>
+                    </div>
+                </div>
+                
+                <div class="section-grid" style="margin-top: 20px;">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableTemporal" checked>
+                        <label for="enableTemporal">Enable Temporal Patterns (daily temperature cycles)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableNoise" checked>
+                        <label for="enableNoise">Enable Sensor Noise (±5% random variation)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableCorrelations" checked>
+                        <label for="enableCorrelations">Enable Feature Correlations (temp ↑ = humidity ↓)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableTransitions" checked>
+                        <label for="enableTransitions">Enable Gradual Transitions (smooth state changes)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableOutliers" checked>
+                        <label for="enableOutliers">Enable Random Outliers (2% anomalies)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableDrift" checked>
+                        <label for="enableDrift">Enable Sensor Drift (long-term calibration shifts)</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Presets -->
+            <div class="section">
+                <h2>🎯 Quick Presets</h2>
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="loadPreset('home')">🏠 Home</button>
+                    <button class="preset-btn" onclick="loadPreset('office')">🏢 Office</button>
+                    <button class="preset-btn" onclick="loadPreset('warehouse')">🏭 Warehouse</button>
+                    <button class="preset-btn" onclick="loadPreset('server')">💻 Server</button>
+                    <button class="preset-btn" onclick="loadPreset('greenhouse')">🌱 Greenhouse</button>
+                </div>
+            </div>
+            
+            <!-- Sensor Ranges -->
+            <div class="section">
+                <h2>📏 Room Sensor Ranges</h2>
+                <div class="section-grid">
+                    <div class="control-group">
+                        <label>Min Temperature (°C)</label>
+                        <input type="number" id="tempMin" value="15" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label>Max Temperature (°C)</label>
+                        <input type="number" id="tempMax" value="45" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label>Min Humidity (%)</label>
+                        <input type="number" id="humMin" value="20" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label>Max Humidity (%)</label>
+                        <input type="number" id="humMax" value="90" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label>Min Gas Level</label>
+                        <input type="number" id="gasMin" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label>Max Gas Level</label>
+                        <input type="number" id="gasMax" value="1023">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Thresholds -->
+            <div class="section">
+                <h2>⚙️ Safety Thresholds</h2>
+                <div class="section-grid">
+                    <div class="threshold-card normal">
+                        <h3>✅ NORMAL (0)</h3>
+                        <div class="threshold-grid">
+                            <div class="threshold-input">
+                                <label>Temp Min</label>
+                                <input type="number" id="normalTempMin" value="18" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Temp Max</label>
+                                <input type="number" id="normalTempMax" value="26" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Min</label>
+                                <input type="number" id="normalHumMin" value="40" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Max</label>
+                                <input type="number" id="normalHumMax" value="60" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Min</label>
+                                <input type="number" id="normalGasMin" value="0">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Max</label>
+                                <input type="number" id="normalGasMax" value="200">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="threshold-card warning">
+                        <h3>⚠️ WARNING (1)</h3>
+                        <div class="threshold-grid">
+                            <div class="threshold-input">
+                                <label>Temp Min</label>
+                                <input type="number" id="warningTempMin" value="26" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Temp Max</label>
+                                <input type="number" id="warningTempMax" value="35" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Min</label>
+                                <input type="number" id="warningHumMin" value="60" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Max</label>
+                                <input type="number" id="warningHumMax" value="80" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Min</label>
+                                <input type="number" id="warningGasMin" value="200">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Max</label>
+                                <input type="number" id="warningGasMax" value="500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="threshold-card dangerous">
+                        <h3>🚨 DANGEROUS (2)</h3>
+                        <div class="threshold-grid">
+                            <div class="threshold-input">
+                                <label>Temp Min</label>
+                                <input type="number" id="dangerousTempMin" value="35" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Temp Max</label>
+                                <input type="number" id="dangerousTempMax" value="45" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Min</label>
+                                <input type="number" id="dangerousHumMin" value="15" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Hum Max</label>
+                                <input type="number" id="dangerousHumMax" value="90" step="0.1">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Min</label>
+                                <input type="number" id="dangerousGasMin" value="500">
+                            </div>
+                            <div class="threshold-input">
+                                <label>Gas Max</label>
+                                <input type="number" id="dangerousGasMax" value="1023">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dataset Config -->
+            <div class="section">
+                <h2>📊 Dataset Configuration</h2>
+                <div class="section-grid">
+                    <div class="control-group">
+                        <label>Total Samples</label>
+                        <input type="number" id="numSamples" value="10000" min="100" max="100000">
+                    </div>
+                    <div class="control-group">
+                        <label>Sampling Interval (seconds)</label>
+                        <input type="number" id="samplingInterval" value="10" min="1" max="3600">
+                    </div>
+                    <div class="control-group">
+                        <label>Random Seed</label>
+                        <input type="number" id="randomSeed" value="42">
+                    </div>
+                </div>
+                
+                <div class="info-box" style="margin-top: 20px;">
+                    <h4>Label Distribution</h4>
+                    <div class="section-grid" style="margin-top: 10px;">
+                        <div class="control-group">
+                            <label>Normal (%)</label>
+                            <input type="number" id="normalPercent" value="60" min="0" max="100">
+                        </div>
+                        <div class="control-group">
+                            <label>Warning (%)</label>
+                            <input type="number" id="warningPercent" value="30" min="0" max="100">
+                        </div>
+                        <div class="control-group">
+                            <label>Dangerous (%)</label>
+                            <input type="number" id="dangerousPercent" value="10" min="0" max="100">
+                        </div>
+                    </div>
+                    <div id="distributionStatus" class="status info" style="display: none;"></div>
+                </div>
+                
+                <button class="generate-btn" onclick="generateDataset()">🚀 Generate Enhanced Dataset</button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="section" id="statsSection" style="display: none;">
+                <h2>📈 Dataset Statistics</h2>
+                <div class="stats" id="statsContainer"></div>
+            </div>
+            
+            <!-- Preview -->
+            <div class="section" id="previewSection" style="display: none;">
+                <h2>👁️ Data Preview</h2>
+                <div class="preview" id="dataPreview"></div>
+            </div>
+            
+            <!-- Download -->
+            <div class="section" id="downloadSection" style="display: none;">
+                <h2>💾 Download Dataset</h2>
+                <div class="download-section">
+                    <button class="download-btn csv" onclick="downloadCSV()">📄 CSV</button>
+                    <button class="download-btn json" onclick="downloadJSON()">📋 JSON</button>
+                    <button class="download-btn python" onclick="downloadPython()">🐍 Python</button>
+                </div>
+                
+                <div class="info-box" style="background: #fff3e0; border-left-color: #ff9800; margin-top: 20px;">
+                    <h4>🎯 Anti-Overfitting Benefits</h4>
+                    <ul>
+                        <li><strong>Temporal patterns:</strong> Models learn time-dependent behaviors</li>
+                        <li><strong>Correlations:</strong> Realistic feature relationships prevent memorization</li>
+                        <li><strong>Noise:</strong> Forces models to learn robust patterns, not exact values</li>
+                        <li><strong>Transitions:</strong> Gradual changes prevent sharp decision boundaries</li>
+                        <li><strong>Outliers:</strong> Improves generalization to unexpected events</li>
+                        <li><strong>Drift:</strong> Models handle sensor calibration changes over time</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let generatedData = [];
+        let currentConfig = {};
+        
+        class SeededRandom {
+            constructor(seed) { this.seed = seed; }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+            
+            normal(mean, stdDev) {
+                const u1 = this.next();
+                const u2 = this.next();
+                const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                return z0 * stdDev + mean;
+            }
+            
+            uniform(min, max) {
+                return min + this.next() * (max - min);
+            }
+        }
+        
+        function loadPreset(type) {
+            const presets = {
+                home: {
+                    tempMin: 15, tempMax: 35, humMin: 30, humMax: 80,
+                    normalTempMin: 18, normalTempMax: 24, normalHumMin: 40, normalHumMax: 60, normalGasMax: 150,
+                    warningTempMin: 24, warningTempMax: 32, warningHumMin: 60, warningHumMax: 75, warningGasMax: 400,
+                    dangerousTempMin: 32, dangerousTempMax: 35, dangerousHumMin: 15, dangerousHumMax: 80, dangerousGasMin: 400
+                },
+                office: {
+                    tempMin: 18, tempMax: 30, humMin: 35, humMax: 70,
+                    normalTempMin: 20, normalTempMax: 24, normalHumMin: 40, normalHumMax: 55, normalGasMax: 100,
+                    warningTempMin: 24, warningTempMax: 28, warningHumMin: 55, warningHumMax: 65, warningGasMax: 300,
+                    dangerousTempMin: 28, dangerousTempMax: 30, dangerousHumMin: 20, dangerousHumMax: 70, dangerousGasMin: 300
+                },
+                warehouse: {
+                    tempMin: 10, tempMax: 40, humMin: 20, humMax: 85,
+                    normalTempMin: 15, normalTempMax: 28, normalHumMin: 30, normalHumMax: 65, normalGasMax: 200,
+                    warningTempMin: 28, warningTempMax: 35, warningHumMin: 65, warningHumMax: 80, warningGasMax: 500,
+                    dangerousTempMin: 35, dangerousTempMax: 40, dangerousHumMin: 15, dangerousHumMax: 85, dangerousGasMin: 500
+                },
+                server: {
+                    tempMin: 18, tempMax: 35, humMin: 20, humMax: 60,
+                    normalTempMin: 18, normalTempMax: 24, normalHumMin: 30, normalHumMax: 50, normalGasMax: 50,
+                    warningTempMin: 24, warningTempMax: 28, warningHumMin: 50, warningHumMax: 55, warningGasMax: 200,
+                    dangerousTempMin: 28, dangerousTempMax: 35, dangerousHumMin: 20, dangerousHumMax: 60, dangerousGasMin: 200
+                },
+                greenhouse: {
+                    tempMin: 15, tempMax: 40, humMin: 40, humMax: 95,
+                    normalTempMin: 20, normalTempMax: 28, normalHumMin: 60, normalHumMax: 80, normalGasMax: 180,
+                    warningTempMin: 28, warningTempMax: 35, warningHumMin: 50, warningHumMax: 90, warningGasMax: 400,
+                    dangerousTempMin: 35, dangerousTempMax: 40, dangerousHumMin: 40, dangerousHumMax: 95, dangerousGasMin: 400
+                }
+            };
+            
+            const preset = presets[type];
+            if (!preset) return;
+            
+            Object.keys(preset).forEach(key => {
+                const elem = document.getElementById(key);
+                if (elem) elem.value = preset[key];
+            });
+            
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        function updateDistributionStatus() {
+            const normal = parseFloat(document.getElementById('normalPercent').value) || 0;
+            const warning = parseFloat(document.getElementById('warningPercent').value) || 0;
+            const dangerous = parseFloat(document.getElementById('dangerousPercent').value) || 0;
+            const total = normal + warning + dangerous;
+            
+            const statusDiv = document.getElementById('distributionStatus');
+            if (Math.abs(total - 100) > 0.1) {
+                statusDiv.textContent = `⚠️ Total: ${total.toFixed(1)}% (must be 100%)`;
+                statusDiv.className = 'status info';
+                statusDiv.style.display = 'block';
+            } else {
+                statusDiv.textContent = `✓ Valid: ${total.toFixed(1)}%`;
+                statusDiv.className = 'status success';
+                statusDiv.style.display = 'block';
+            }
+        }
+        
+        ['normalPercent', 'warningPercent', 'dangerousPercent'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateDistributionStatus);
+        });
+        
+        function generateDataset() {
+            currentConfig = {
+                tempMin: parseFloat(document.getElementById('tempMin').value),
+                tempMax: parseFloat(document.getElementById('tempMax').value),
+                humMin: parseFloat(document.getElementById('humMin').value),
+                humMax: parseFloat(document.getElementById('humMax').value),
+                gasMin: parseInt(document.getElementById('gasMin').value),
+                gasMax: parseInt(document.getElementById('gasMax').value),
+                
+                normal: {
+                    tempMin: parseFloat(document.getElementById('normalTempMin').value),
+                    tempMax: parseFloat(document.getElementById('normalTempMax').value),
+                    humMin: parseFloat(document.getElementById('normalHumMin').value),
+                    humMax: parseFloat(document.getElementById('normalHumMax').value),
+                    gasMin: parseInt(document.getElementById('normalGasMin').value),
+                    gasMax: parseInt(document.getElementById('normalGasMax').value)
+                },
+                warning: {
+                    tempMin: parseFloat(document.getElementById('warningTempMin').value),
+                    tempMax: parseFloat(document.getElementById('warningTempMax').value),
+                    humMin: parseFloat(document.getElementById('warningHumMin').value),
+                    humMax: parseFloat(document.getElementById('warningHumMax').value),
+                    gasMin: parseInt(document.getElementById('warningGasMin').value),
+                    gasMax: parseInt(document.getElementById('warningGasMax').value)
+                },
+                dangerous: {
+                    tempMin: parseFloat(document.getElementById('dangerousTempMin').value),
+                    tempMax: parseFloat(document.getElementById('dangerousTempMax').value),
+                    humMin: parseFloat(document.getElementById('dangerousHumMin').value),
+                    humMax: parseFloat(document.getElementById('dangerousHumMax').value),
+                    gasMin: parseInt(document.getElementById('dangerousGasMin').value),
+                    gasMax: parseInt(document.getElementById('dangerousGasMax').value)
+                },
+                
+                // Anti-overfitting features
+                enableTemporal: document.getElementById('enableTemporal').checked,
+                enableNoise: document.getElementById('enableNoise').checked,
+                enableCorrelations: document.getElementById('enableCorrelations').checked,
+                enableTransitions: document.getElementById('enableTransitions').checked,
+                enableOutliers: document.getElementById('enableOutliers').checked,
+                enableDrift: document.getElementById('enableDrift').checked
+            };
+            
+            const numSamples = parseInt(document.getElementById('numSamples').value);
+            const samplingInterval = parseInt(document.getElementById('samplingInterval').value);
+            const seed = parseInt(document.getElementById('randomSeed').value);
+            
+            const normalPercent = parseFloat(document.getElementById('normalPercent').value) / 100;
+            const warningPercent = parseFloat(document.getElementById('warningPercent').value) / 100;
+            const dangerousPercent = parseFloat(document.getElementById('dangerousPercent').value) / 100;
+            
+            const totalPercent = normalPercent + warningPercent + dangerousPercent;
+            if (Math.abs(totalPercent - 1.0) > 0.01) {
+                alert('Distribution must sum to 100%!');
+                return;
+            }
+            
+            const rng = new SeededRandom(seed);
+            generatedData = [];
+            
+            const numNormal = Math.floor(numSamples * normalPercent);
+            const numWarning = Math.floor(numSamples * warningPercent);
+            const numDangerous = numSamples - numNormal - numWarning;
+            
+            const startTime = new Date('2024-01-01T00:00:00');
+            
+            // Generate initial samples
+            const scenarios = [];
+            for (let i = 0; i < numNormal; i++) scenarios.push('normal');
+            for (let i = 0; i < numWarning; i++) scenarios.push('warning');
+            for (let i = 0; i < numDangerous; i++) scenarios.push('dangerous');
+            
+            // Shuffle scenarios
+            for (let i = scenarios.length - 1; i > 0; i--) {
+                const j = Math.floor(rng.next() * (i + 1));
+                [scenarios[i], scenarios[j]] = [scenarios[j], scenarios[i]];
+            }
+            
+            // Generate with transitions
+            let prevTemp = null, prevHum = null, prevGas = null;
+            let driftTemp = 0, driftHum = 0, driftGas = 0;
+            
+            for (let i = 0; i < numSamples; i++) {
+                const timestamp = new Date(startTime.getTime() + i * samplingInterval * 1000);
+                const hourOfDay = timestamp.getHours() + timestamp.getMinutes() / 60;
+                
+                // Sensor drift (long-term)
+                if (currentConfig.enableDrift && i % 1000 === 0) {
+                    driftTemp += rng.normal(0, 0.1);
+                    driftHum += rng.normal(0, 0.3);
+                    driftGas += rng.normal(0, 2);
+                }
+                
+                const sample = generateSample(
+                    rng, scenarios[i], timestamp, hourOfDay,
+                    prevTemp, prevHum, prevGas,
+                    driftTemp, driftHum, driftGas
+                );
+                
+                generatedData.push(sample);
+                prevTemp = sample.temperature;
+                prevHum = sample.humidity;
+                prevGas = sample.gas_level;
+            }
+            
+            displayResults();
+        }
+        
+        function generateSample(rng, scenario, timestamp, hourOfDay, prevTemp, prevHum, prevGas, driftTemp, driftHum, driftGas) {
+            const config = currentConfig[scenario];
+            
+            // Base values
+            const tempMean = (config.tempMin + config.tempMax) / 2;
+            const tempStd = (config.tempMax - config.tempMin) / 6;
+            let temp = rng.normal(tempMean, tempStd);
+            
+            // Temporal pattern (daily cycle)
+            if (currentConfig.enableTemporal) {
+                const dailyCycle = 3 * Math.sin((hourOfDay - 6) * Math.PI / 12); // Peak at 2pm
+                temp += dailyCycle;
+            }
+            
+            // Gradual transitions
+            if (currentConfig.enableTransitions && prevTemp !== null) {
+                const alpha = 0.7; // Smoothing factor
+                temp = alpha * temp + (1 - alpha) * prevTemp;
+            }
+            
+            // Sensor drift
+            temp += driftTemp;
+            
+            // Noise
+            if (currentConfig.enableNoise) {
+                temp += rng.normal(0, 0.2); // ±0.2°C noise
+            }
+            
+            // Clamp to ranges
+            temp = Math.max(config.tempMin, Math.min(config.tempMax, temp));
+            temp = Math.max(currentConfig.tempMin, Math.min(currentConfig.tempMax, temp));
+            
+            // Humidity (correlated with temperature)
+            const humMean = (config.humMin + config.humMax) / 2;
+            const humStd = (config.humMax - config.humMin) / 6;
+            let humidity = rng.normal(humMean, humStd);
+            
+            // Temperature-humidity inverse correlation
+            if (currentConfig.enableCorrelations) {
+                const tempNorm = (temp - tempMean) / tempStd;
+                humidity -= tempNorm * 5; // Higher temp = lower humidity
+            }
+            
+            // Transitions
+            if (currentConfig.enableTransitions && prevHum !== null) {
+                const alpha = 0.6;
+                humidity = alpha * humidity + (1 - alpha) * prevHum;
+            }
+            
+            humidity += driftHum;
+            if (currentConfig.enableNoise) {
+                humidity += rng.normal(0, 0.5);
+            }
+            
+            humidity = Math.max(config.humMin, Math.min(config.humMax, humidity));
+            humidity = Math.max(currentConfig.humMin, Math.min(currentConfig.humMax, humidity));
+            
+            // Gas (correlated with temperature in dangerous scenarios)
+            const gasMean = (config.gasMin + config.gasMax) / 2;
+            const gasStd = (config.gasMax - config.gasMin) / 6;
+            let gas = rng.normal(gasMean, gasStd);
+            
+            // Feature interaction (fire: high temp → high gas)
+            if (currentConfig.enableCorrelations && scenario === 'dangerous') {
+                const tempFactor = (temp - config.tempMin) / (config.tempMax - config.tempMin);
+                gas += tempFactor * 100;
+            }
+            
+            // Transitions
+            if (currentConfig.enableTransitions && prevGas !== null) {
+                const alpha = 0.5;
+                gas = alpha * gas + (1 - alpha) * prevGas;
+            }
+            
+            gas += driftGas;
+            if (currentConfig.enableNoise) {
+                gas += rng.normal(0, 5);
+            }
+            
+            gas = Math.max(config.gasMin, Math.min(config.gasMax, gas));
+            gas = Math.max(currentConfig.gasMin, Math.min(currentConfig.gasMax, gas));
+            
+            // Outliers (2% chance)
+            if (currentConfig.enableOutliers && rng.next() < 0.02) {
+                const outlierType = Math.floor(rng.next() * 3);
+                if (outlierType === 0) temp += rng.uniform(-5, 5);
+                else if (outlierType === 1) humidity += rng.uniform(-10, 10);
+                else gas += rng.uniform(-50, 50);
+            }
+            
+            // Light (dependent on scenario and time)
+            let lightProb = scenario === 'normal' ? 0.7 : scenario === 'warning' ? 0.4 : 0.2;
+            if (currentConfig.enableTemporal) {
+                // Daytime (6am-6pm) more likely bright
+                if (hourOfDay >= 6 && hourOfDay <= 18) lightProb += 0.2;
+            }
+            const light = rng.next() < Math.min(1, lightProb) ? 1 : 0;
+            
+            const label = scenario === 'normal' ? 0 : scenario === 'warning' ? 1 : 2;
+            
+            // DHT11 precision
+            temp = Math.round(temp * 10) / 10;
+            humidity = Math.round(humidity * 10) / 10;
+            gas = Math.round(gas);
+            
+            return {
+                timestamp: timestamp.toISOString(),
+                temperature: temp,
+                humidity: humidity,
+                gas_level: gas,
+                light: light,
+                label: label,
+                label_name: ['normal', 'warning', 'dangerous'][label]
+            };
+        }
+        
+        function displayResults() {
+            const stats = {
+                total: generatedData.length,
+                normal: generatedData.filter(d => d.label === 0).length,
+                warning: generatedData.filter(d => d.label === 1).length,
+                dangerous: generatedData.filter(d => d.label === 2).length
+            };
+            
+            const statsHTML = `
+                <div class="stat-card">
+                    <h3>Total Samples</h3>
+                    <p>${stats.total}</p>
+                </div>
+                <div class="stat-card normal">
+                    <h3>Normal (0)</h3>
+                    <p>${stats.normal} (${(stats.normal/stats.total*100).toFixed(1)}%)</p>
+                </div>
+                <div class="stat-card warning">
+                    <h3>Warning (1)</h3>
+                    <p>${stats.warning} (${(stats.warning/stats.total*100).toFixed(1)}%)</p>
+                </div>
+                <div class="stat-card dangerous">
+                    <h3>Dangerous (2)</h3>
+                    <p>${stats.dangerous} (${(stats.dangerous/stats.total*100).toFixed(1)}%)</p>
+                </div>
+            `;
+            
+            document.getElementById('statsContainer').innerHTML = statsHTML;
+            document.getElementById('statsSection').style.display = 'block';
+            
+            const preview = generatedData.slice(0, 20).map(d => 
+                `${d.timestamp} | T:${d.temperature.toFixed(1)}°C H:${d.humidity.toFixed(1)}% G:${d.gas_level.toString().padStart(4)} L:${d.light} | ${d.label} (${d.label_name})`
+            ).join('\n');
+            
+            document.getElementById('dataPreview').textContent = preview;
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('downloadSection').style.display = 'block';
+            
+            document.getElementById('statsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function downloadCSV() {
+            const header = 'timestamp,temperature,humidity,gas_level,light,label,label_name\n';
+            const rows = generatedData.map(d => 
+                `${d.timestamp},${d.temperature},${d.humidity},${d.gas_level},${d.light},${d.label},${d.label_name}`
+            ).join('\n');
+            
+            downloadFile(header + rows, 'iot_enhanced_dataset.csv', 'text/csv');
+        }
+        
+        function downloadJSON() {
+            const output = {
+                metadata: {
+                    generated: new Date().toISOString(),
+                    samples: generatedData.length,
+                    features_enabled: {
+                        temporal: currentConfig.enableTemporal,
+                        noise: currentConfig.enableNoise,
+                        correlations: currentConfig.enableCorrelations,
+                        transitions: currentConfig.enableTransitions,
+                        outliers: currentConfig.enableOutliers,
+                        drift: currentConfig.enableDrift
+                    }
+                },
+                data: generatedData
+            };
+            downloadFile(JSON.stringify(output, null, 2), 'iot_enhanced_dataset.json', 'application/json');
+        }
+        
+        function downloadPython() {
+            const pythonCode = `# Enhanced IoT Dataset - Anti-Overfitting Training
+# Generated: ${new Date().toISOString()}
+# Samples: ${generatedData.length}
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+
+# Load dataset
+df = pd.read_csv('iot_enhanced_dataset.csv')
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+# Extract features
+X = df[['temperature', 'humidity', 'gas_level', 'light']].values
+y = df['label'].values
+
+print(f"Dataset: {X.shape[0]} samples, {X.shape[1]} features")
+print(f"Distribution: 0={np.sum(y==0)}, 1={np.sum(y==1)}, 2={np.sum(y==2)}")
+
+# Stratified split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Scale
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Train with regularization
+clf = RandomForestClassifier(
+    n_estimators=100,
+    max_depth=10,  # Prevent overfitting
+    min_samples_split=20,
+    min_samples_leaf=10,
+    random_state=42
+)
+clf.fit(X_train_scaled, y_train)
+
+# Cross-validation
+cv_scores = cross_val_score(clf, X_train_scaled, y_train, cv=5)
+print(f"\\nCV Accuracy: {cv_scores.mean():.2%} (+/- {cv_scores.std()*2:.2%})")
+
+# Test set
+y_pred = clf.predict(X_test_scaled)
+print(f"Test Accuracy: {clf.score(X_test_scaled, y_test):.2%}")
+print("\\n" + classification_report(y_test, y_pred, 
+      target_names=['Normal', 'Warning', 'Dangerous']))
+`;
+            
+            downloadFile(pythonCode, 'train_enhanced_model.py', 'text/plain');
+        }
+        
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        updateDistributionStatus();
+    </script>
+</body>
+</html>
